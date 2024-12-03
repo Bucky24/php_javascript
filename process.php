@@ -2,7 +2,7 @@
 
 include_once("types.php");
 
-$LOG = false;
+$LOG = true;
 
 function _log($str) {
     global $LOG;
@@ -67,14 +67,20 @@ function buildTree($tokens) {
         $state = $context['state'];
         _log($token . " " . var_export($context, true) . "\n");
         if ($state == START_STATE) {
-            if (isValidVariable($token)) {
-                $context['var_or_function'] = $token;
-                $context['state'] = VAR_OR_FUNCTION;
-                continue;
-            } else if ($token === "\"") {
+            if ($token === "\"") {
                 $context['state'] = STRING;
                 $context['quote_type'] = "\"";
                 $context['contents'] = array();
+                continue;
+            } else if ($token === "const") {
+                $context['state'] = VAR_DEFINITION;
+                $context['constant'] = true;
+                continue;
+            } else if (isValidVariable($token)) {
+                $context['var_or_function'] = $token;
+                $context['state'] = VAR_OR_FUNCTION;
+                continue;
+            } else if ($token === " " || $token === "\n") {
                 continue;
             }
         } else if ($state == VAR_OR_FUNCTION) {
@@ -125,6 +131,20 @@ function buildTree($tokens) {
                 $context = newContext();
                 continue;
             }
+        } else if ($state === VAR_DEFINITION) {
+            if ($token === " ") {
+                continue;
+            } else if (isValidVariable($token)) {
+                $context['name'] = $token;
+                continue;
+            } else if ($token === "=") {
+                $context = pushContext($context_stack, $context);
+                continue;
+            } else if ($token === ";") {
+                $tree[] = $context;
+                $context = newContext();
+                continue;
+            }
         }
 
         throw new Exception("Unexpected token \"$token\" in state \"$state\"");
@@ -134,7 +154,7 @@ function buildTree($tokens) {
 }
 
 function tokenize($code) {
-    $interesting_chars = array(".", "(", ")", ";", "\"");
+    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n");
     $tokens = array();
     $buffer = "";
     for ($i=0;$i<strlen($code);$i++) {

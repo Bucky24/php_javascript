@@ -6,5 +6,6 @@ const NESTED_PATH = 'nested_path';
 const FUNCTION_CALL = "function_call";
 const FUNCTION_PARAMS = "function_params";
 const STRING = "string";
+const VAR_DEFINITION = "var_definition";
 
 ?>

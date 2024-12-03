@@ -42,7 +42,13 @@ function getFunctionByName($name, $context = null) {
     }
 }
 
-function execute($tree) {
+function execute($tree, $context = null) {
+    if ($context === null) {
+        $context = array(
+            "variables" => array(),
+        );
+    }
+
     $currentStatement = 0;
     $results = array();
     while ($currentStatement < count($tree)) {
@@ -64,6 +70,9 @@ function execute($tree) {
             call_user_func_array($function, $paramData);
         } else if ($statement['state'] == STRING) {
             $results[] = implode('', $statement['contents']);
+        } else if ($statement['state'] == VAR_DEFINITION) {
+            $value = execute($statement['children'])[0];
+            $context['variables'][$statement['name']] = $value;
         } else {
             throw new Exception("Don't know how to execute {$statement['state']}");
         }
