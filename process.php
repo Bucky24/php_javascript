@@ -2,7 +2,7 @@
 
 include_once("types.php");
 
-$LOG = true;
+$LOG = false;
 
 function _log($str) {
     global $LOG;

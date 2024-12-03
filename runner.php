@@ -42,7 +42,7 @@ function getFunctionByName($name, $context = null) {
     }
 }
 
-function execute($tree, $context = null) {
+function execute($tree, &$context = null) {
     if ($context === null) {
         $context = array(
             "variables" => array(),
@@ -54,14 +54,16 @@ function execute($tree, $context = null) {
     while ($currentStatement < count($tree)) {
         $statement = $tree[$currentStatement];
 
-        if ($statement['state'] == FUNCTION_CALL) {
+        if ($statement['state'] == START_STATE) {
+            // noop
+        } else if ($statement['state'] == FUNCTION_CALL) {
             $params = getChildOfType($statement, FUNCTION_PARAMS);
             if ($params === null) {
                 throw new Exception("No parameters provided for function {$statement['function']}");
             }
             $paramData = array();
             foreach ($params['children'] as $param) {
-                $paramData[] = execute(array($param))[0];
+                $paramData[] = execute(array($param), $context)[0];
             }
 
             $function_name = $statement['children'][0];
@@ -71,8 +73,30 @@ function execute($tree, $context = null) {
         } else if ($statement['state'] == STRING) {
             $results[] = implode('', $statement['contents']);
         } else if ($statement['state'] == VAR_DEFINITION) {
-            $value = execute($statement['children'])[0];
+            $value = execute($statement['children'], $context)[0];
             $context['variables'][$statement['name']] = $value;
+        } else if ($statement['state'] == CONDITIONAL) {
+            $condition_result = execute($statement['condition'][0]['children'], $context)[0];
+            if ($condition_result) {
+                execute($statement['children'], $context);
+            }
+        } else if ($statement['state'] == COMPARISON) {
+            $left_hand_value = execute(array($statement['left_hand']), $context)[0];
+            $right_hand_value = execute($statement['children'], $context)[0];
+
+            $op = $statement['operator'];
+
+            if ($op === "===") {
+                $results[] = $left_hand_value === $right_hand_value;
+            } else {
+                throw new Exception("Unexpected operator \"$op\"");
+            }
+        } else if ($statement['state'] == VAR_OR_FUNCTION) {
+            if (array_key_exists($statement['var_or_function'], $context['variables'])) {
+                $results[] = $context['variables'][$statement['var_or_function']];
+            } else {
+                throw new Exception("No such variable \"" . $statement['var_or_function'] . "\"");
+            }
         } else {
             throw new Exception("Don't know how to execute {$statement['state']}");
         }
