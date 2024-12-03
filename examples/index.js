@@ -1,2 +1,4 @@
-const name = "blah";
-console.log("foo bar");
+const name = "frog";
+if (name === "blah") {
+    console.log("foo bar");
+}

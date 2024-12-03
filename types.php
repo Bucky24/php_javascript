@@ -7,5 +7,8 @@ const FUNCTION_CALL = "function_call";
 const FUNCTION_PARAMS = "function_params";
 const STRING = "string";
 const VAR_DEFINITION = "var_definition";
+const CONDITIONAL = "conditional";
+const CONDITIONAL_CONDITION = "conditional_condition";
+const COMPARISON = "comparison";
 
 ?>
