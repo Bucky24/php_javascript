@@ -16,5 +16,7 @@ const NUMBER = "number";
 const MATH = "math";
 const INCREMENT = "increment";
 const BLOCK = "block";
+const IMPORT = "import";
+const OBJ_DESTRUCTURE = "obj_destructure";
 
 ?>

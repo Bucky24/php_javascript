@@ -2,6 +2,8 @@
 
 include_once("types.php");
 include_once("builtin.php");
+include_once("module.php");
+include_once("loader.php");
 
 function getChildOfType($statement, $type) {
     if (!array_key_exists('children', $statement)) {
@@ -138,6 +140,16 @@ function execute($tree, &$context = null) {
             } else {
                 throw new Exception("No such variable \"" . $statement['var_or_function'] . "\"");
             }
+        } else if ($statement['state'] == IMPORT) {
+            $file = execute($statement['children'], $context)[0];
+            print $file . "\n";
+            $contents = getModule($file);
+            if (!$contents) {
+                $contents = processFile($file);
+                saveModule($file, $contents);
+            }
+            print_r($contents);
+            print_r($statement);
         } else {
             throw new Exception("Don't know how to execute {$statement['state']}");
         }

@@ -117,6 +117,12 @@ function buildTree($tokens) {
                 $context['state'] = NUMBER;
                 $context['number'] = $token;
                 continue;
+            } else if($token === "import") {
+                $context['state'] = IMPORT;
+                continue;  
+            } else if ($token === "{") {
+                $context['state'] = OBJ_DESTRUCTURE;
+                continue;  
             } else if (isValidVariable($token)) {
                 $context['var_or_function'] = $token;
                 $context['state'] = VAR_OR_FUNCTION;
@@ -327,6 +333,39 @@ function buildTree($tokens) {
             }
             $context = pushContext($context_stack, $context);
             continue;
+        } else if ($state === IMPORT) {
+            if ($token === " ") {
+                continue;
+            } else if ($token === "from") {
+                $context['import'] = $context['children'];
+                $context['children'] = array();
+
+                $context = pushContext($context_stack, $context);
+                continue;
+            } else if ($token === ";") {
+                $context = popContext($context_stack, $context, $tree);
+                continue;
+            } else {
+                $context = pushContext($context_stack, $context);
+                $i--;
+                continue;
+            }
+        } else if ($state === OBJ_DESTRUCTURE) {
+            if ($token === " ") {
+                continue;
+            } else if ($token === ",") {
+                // may need to do something different here
+                continue;
+            } else if ($token === "}") {
+                $context = popContext($context_stack, $context, $tree);
+                continue;
+            } else {
+                if (!array_key_exists("names", $context)) {
+                    $context['names'] = array();
+                }
+                $context['names'][] = $token;
+                continue;
+            }
         }
         throw new Exception("Unexpected token \"$token\" in state \"$state\"");
     }
@@ -343,7 +382,7 @@ function buildTree($tokens) {
 }
 
 function tokenize($code) {
-    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n", "'", "=", "<", ">", "!", "+", "-", "/", "*");
+    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n", "'", "=", "<", ">", "!", "+", "-", "/", "*", ",");
     $tokens = array();
     $buffer = "";
     for ($i=0;$i<strlen($code);$i++) {

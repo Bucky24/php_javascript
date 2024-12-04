@@ -1,3 +1,5 @@
+import { foo, bar } from "./bleh.js";
+
 const name = "frog";
 if (name === "blah") {
     console.log("foo bar");
