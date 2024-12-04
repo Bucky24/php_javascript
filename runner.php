@@ -76,9 +76,16 @@ function execute($tree, &$context = null) {
             $value = execute($statement['children'], $context)[0];
             $context['variables'][$statement['name']] = $value;
         } else if ($statement['state'] == CONDITIONAL) {
-            $condition_result = execute($statement['condition'][0]['children'], $context)[0];
+            if (array_key_exists('else', $statement) && $statement['else'] && !array_key_exists('condition', $statement)) {
+                $condition_result = true;
+            } else {
+                $condition_result = execute($statement['condition'][0]['children'], $context)[0];
+            }
             if ($condition_result) {
                 execute($statement['children'], $context);
+                $results[] = true;
+            } else {
+                $results[] = false;
             }
         } else if ($statement['state'] == COMPARISON) {
             $left_hand_value = execute(array($statement['left_hand']), $context)[0];
@@ -96,6 +103,13 @@ function execute($tree, &$context = null) {
                 $results[] = $context['variables'][$statement['var_or_function']];
             } else {
                 throw new Exception("No such variable \"" . $statement['var_or_function'] . "\"");
+            }
+        } else if ($statement['state'] == CONDITIONAL_GROUP) {
+            foreach ($statement['children'] as $child) {
+                $result = execute(array($child), $context)[0];
+                if ($result) {
+                    break;
+                }
             }
         } else {
             throw new Exception("Don't know how to execute {$statement['state']}");
