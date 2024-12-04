@@ -45,10 +45,8 @@ function getFunctionByName($name, $context = null) {
 }
 
 function execute($tree, &$context = null) {
-    if ($context === null) {
-        $context = array(
-            "variables" => array(),
-        );
+    if (!array_key_exists("variables", $context)) {
+        $context["variables"] = array();
     }
 
     $currentStatement = 0;
@@ -142,10 +140,17 @@ function execute($tree, &$context = null) {
             }
         } else if ($statement['state'] == IMPORT) {
             $file = execute($statement['children'], $context)[0];
-            print $file . "\n";
-            $contents = getModule($file);
+
+            $path = new SplFileInfo($context['file']);
+            $realPath = $path->getRealPath();
+            $dir = dirname($realPath);
+            $tempModulePath = $dir . "/" . $file;
+            $path = new SplFileInfo($tempModulePath);
+            $realPath = $path->getRealPath();
+
+            $contents = getModule($realPath);
             if (!$contents) {
-                $contents = processFile($file);
+                $contents = processFile($realPath);
                 saveModule($file, $contents);
             }
             print_r($contents);

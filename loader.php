@@ -21,7 +21,10 @@ function processFile($file) {
     $result = processCode($lines);
     $tree = $result[0];
 
-    return execute($tree);
+    $context = array(
+        "file" => $file,
+    );
+    return execute($tree, $context);
 }
 
 ?>

@@ -2,7 +2,7 @@
 
 include_once("types.php");
 
-$LOG = false;
+$LOG = true;
 
 function _log($str) {
     global $LOG;
@@ -123,6 +123,12 @@ function buildTree($tokens) {
             } else if ($token === "{") {
                 $context['state'] = OBJ_DESTRUCTURE;
                 continue;  
+            } else if ($token === "export") {
+                $context['state'] = EXPORT;
+                continue;  
+            } else if ($token === "function") {
+                $context['state'] = FUNCTION_DEF;
+                continue;
             } else if (isValidVariable($token)) {
                 $context['var_or_function'] = $token;
                 $context['state'] = VAR_OR_FUNCTION;
@@ -364,6 +370,19 @@ function buildTree($tokens) {
                     $context['names'] = array();
                 }
                 $context['names'][] = $token;
+                continue;
+            }
+        } else if ($state === EXPORT) {
+            if (array_key_exists("children", $context)) {
+                $context = popContext($context_stack, $context, $tree);
+                $i --;
+                continue;
+            } else {
+                $context = pushContext($context_stack, $context);
+                continue;
+            }
+        } else if ($state === FUNCTION_DEF) {
+            if ($token === " ") {
                 continue;
             }
         }

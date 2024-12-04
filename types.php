@@ -18,5 +18,7 @@ const INCREMENT = "increment";
 const BLOCK = "block";
 const IMPORT = "import";
 const OBJ_DESTRUCTURE = "obj_destructure";
+const EXPORT = "export";
+const FUNCTION_DEF = "function_def";
 
 ?>
