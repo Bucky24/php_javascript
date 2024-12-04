@@ -132,6 +132,12 @@ function execute($tree, &$context = null) {
             }
         } else if ($statement['state'] == NUMBER) {
             $results[] = intval($statement['number']);
+        } else if ($statement['state'] == INCREMENT) {
+            if (array_key_exists($statement['variable'], $context['variables'])) {
+                $context['variables'][$statement['variable']] = $context['variables'][$statement['variable']] + 1;
+            } else {
+                throw new Exception("No such variable \"" . $statement['var_or_function'] . "\"");
+            }
         } else {
             throw new Exception("Don't know how to execute {$statement['state']}");
         }
