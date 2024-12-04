@@ -309,7 +309,7 @@ function buildTree($tokens) {
             if ($token === "+") {
                 if ($context['operator'] === "+") {
                     $context['state'] = INCREMENT;
-                    $context['variable'] = $context['children'][0]['name'];
+                    $context['variable'] = $context['left_hand']['var_or_function'];
                     continue;
                 }
             }

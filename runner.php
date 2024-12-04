@@ -95,6 +95,8 @@ function execute($tree, &$context = null) {
 
             if ($op === "===") {
                 $results[] = $left_hand_value === $right_hand_value;
+            } else if ($op === "<") {
+                $results[] = $left_hand_value < $right_hand_value;
             } else {
                 throw new Exception("Unexpected operator \"$op\"");
             }
@@ -114,6 +116,22 @@ function execute($tree, &$context = null) {
         } else if ($statement['state'] == BLOCK) {
             // later on we will want to have a specific context for this block but that comes later
             execute($statement['children'], $context);
+        } else if ($statement['state'] == FOR_LOOP) {
+            $init = $statement['statements'][0];
+            $check = $statement['statements'][1];
+            $post = $statement['statements'][2];
+
+            execute(array($init), $context);
+            while (true) {
+                $check_result = execute(array($check), $context)[0];
+                if (!$check_result) {
+                    break;
+                }
+                execute($statement['children'], $context);
+                execute(array($post), $context);
+            }
+        } else if ($statement['state'] == NUMBER) {
+            $results[] = intval($statement['number']);
         } else {
             throw new Exception("Don't know how to execute {$statement['state']}");
         }
