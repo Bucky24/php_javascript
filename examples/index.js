@@ -6,3 +6,7 @@ if (name === "blah") {
 } else {
     console.log("bar foo");
 }
+
+for (let i=0;i<5;i++) {
+    console.log(i);
+}

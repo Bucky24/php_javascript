@@ -11,5 +11,10 @@ const CONDITIONAL = "conditional";
 const CONDITIONAL_GROUP = "conditional_group";
 const CONDITIONAL_CONDITION = "conditional_condition";
 const COMPARISON = "comparison";
+const FOR_LOOP = "for_loop";
+const NUMBER = "number";
+const MATH = "math";
+const INCREMENT = "increment";
+const BLOCK = "block";
 
 ?>

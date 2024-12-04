@@ -111,6 +111,9 @@ function execute($tree, &$context = null) {
                     break;
                 }
             }
+        } else if ($statement['state'] == BLOCK) {
+            // later on we will want to have a specific context for this block but that comes later
+            execute($statement['children'], $context);
         } else {
             throw new Exception("Don't know how to execute {$statement['state']}");
         }
