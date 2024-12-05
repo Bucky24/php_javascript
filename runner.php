@@ -109,7 +109,7 @@ function execute($tree, &$context = null) {
             }
 
             if (is_array($function)) {
-                execute(array($function), $context);
+                execute($function['statements'], $context);
             } else {
                 call_user_func_array($function, $paramData);
             }
@@ -232,7 +232,10 @@ function execute($tree, &$context = null) {
             $results[] = array(
                 "type" => "function",
                 "name" => $statement['name'],
-                "data" => $statement,
+                "data" => array(
+                    "params" => getChildOfType($statement, FUNCTION_DEF_PARAMS),
+                    "statements" => getChildenOfType($statement, BLOCK),
+                ),
             );
         } else if ($statement['state'] == OBJ_DESTRUCTURE) {
             $results = array_merge($results, $statement['names']);
