@@ -5,14 +5,25 @@ include_once("builtin.php");
 include_once("module.php");
 include_once("loader.php");
 
-function getChildOfType($statement, $type) {
+function getChildenOfType($statement, $type) {
     if (!array_key_exists('children', $statement)) {
         return null;
     }
+    $results = array();
     foreach ($statement['children'] as $child) {
         if ($child['state'] == $type) {
-            return $child;
+            $results[] = $child;
         }
+    }
+
+    return $results;
+}
+
+
+function getChildOfType($statement, $type) {
+    $results = getChildenOfType($statement, $type);
+    if (count($results) > 0) {
+        return $results[0];
     }
 
     return null;
@@ -31,16 +42,35 @@ function getFunctionByName($name, $context = null) {
         $path = $name['path'];
         if (count($path) > 1) {
             $class = getClassByName($path[0], $context);
-            return getFunctionByName(array(
+            list ($function, $name_fragment) = getFunctionByName(array(
                 "state" => NESTED_PATH,
                 "path" => array_slice($path, 1),
             ), $class);
+
+            return array(
+                $function,
+                "{$path[0]}.$name_fragment",
+            );
         } else {
             if (array_key_exists($path[0], $context['functions'])) {
-                return $context['functions'][$path[0]];
+                return array(
+                    $context['functions'][$path[0]],
+                    $path[0],
+                );
             }
             throw new Exception("Function {$path[0]} was not found");
         }
+    } else if ($name['state'] == VAR_OR_FUNCTION) {
+        $func_name = $name['var_or_function'];
+        if (array_key_exists($func_name, $context['functions'])) {
+            return array(
+                $context['functions'][$func_name],
+                $func_name,
+            );
+        }
+        throw new Exception("Function {$func_name} was not found");
+    } else {
+        throw new Exception("Unsure how to get function from name " . var_export($name, true));
     }
 }
 
@@ -48,6 +78,10 @@ function execute($tree, &$context = null) {
     if (!array_key_exists("variables", $context)) {
         $context["variables"] = array();
     }
+    if (!array_key_exists("functions", $context)) {
+        $context["functions"] = array();
+    }
+
 
     $currentStatement = 0;
     $results = array();
@@ -62,19 +96,33 @@ function execute($tree, &$context = null) {
                 throw new Exception("No parameters provided for function {$statement['function']}");
             }
             $paramData = array();
-            foreach ($params['children'] as $param) {
-                $paramData[] = execute(array($param), $context)[0];
+                if (array_key_exists("children", $params)) {
+                foreach ($params['children'] as $param) {
+                    $paramData[] = execute(array($param), $context)[0];
+                }
             }
 
             $function_name = $statement['children'][0];
-            $function = getFunctionByName($function_name);
+            list($function, $real_name) = getFunctionByName($function_name, $context);
+            if (!$function) {
+                throw new Exception("Cannot find function with name $real_name");
+            }
 
-            call_user_func_array($function, $paramData);
+            if (is_array($function)) {
+                execute(array($function), $context);
+            } else {
+                call_user_func_array($function, $paramData);
+            }
         } else if ($statement['state'] == STRING) {
             $results[] = implode('', $statement['contents']);
         } else if ($statement['state'] == VAR_DEFINITION) {
             $value = execute($statement['children'], $context)[0];
             $context['variables'][$statement['name']] = $value;
+            $results[] = array(
+                "type" => "variable",
+                "name" => $statement['name'],
+                "data" => $statement,
+            );
         } else if ($statement['state'] == CONDITIONAL) {
             if (array_key_exists('else', $statement) && $statement['else'] && !array_key_exists('condition', $statement)) {
                 $condition_result = true;
@@ -153,8 +201,41 @@ function execute($tree, &$context = null) {
                 $contents = processFile($realPath);
                 saveModule($file, $contents);
             }
-            print_r($contents);
-            print_r($statement);
+            $expect = array();
+            foreach ($statement['import'] as $import) {
+                $expect = array_merge($expect, execute(array($import), $context));
+            }
+            $exports = array();
+            foreach ($contents as $content) {
+                if ($content['type'] === 'export') {
+                    $export = $content['export'];
+                    $exports[$export['name']] = $export;
+                }
+            }
+
+            foreach ($expect as $item) {
+                if (!array_key_exists($item, $exports)) {
+                    throw new Error("No export detected named $item");
+                }
+                $export = $exports[$item];
+                if ($export['type'] === "function") {
+                    $context['functions'][$item] = $export['data'];
+                }
+            }
+        } else if ($statement['state'] == EXPORT) {
+            $result = execute($statement['children'], $context)[0];
+            $results[] = array(
+                "type" => "export",
+                "export" => $result,
+            );
+        } else if ($statement['state'] == FUNCTION_DEF) {
+            $results[] = array(
+                "type" => "function",
+                "name" => $statement['name'],
+                "data" => $statement,
+            );
+        } else if ($statement['state'] == OBJ_DESTRUCTURE) {
+            $results = array_merge($results, $statement['names']);
         } else {
             throw new Exception("Don't know how to execute {$statement['state']}");
         }

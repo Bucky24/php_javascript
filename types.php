@@ -20,5 +20,6 @@ const IMPORT = "import";
 const OBJ_DESTRUCTURE = "obj_destructure";
 const EXPORT = "export";
 const FUNCTION_DEF = "function_def";
+const FUNCTION_DEF_PARAMS = "function_def_params";
 
 ?>

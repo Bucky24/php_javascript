@@ -2,7 +2,7 @@
 
 include_once("types.php");
 
-$LOG = true;
+$LOG = false;
 
 function _log($str) {
     global $LOG;
@@ -79,7 +79,7 @@ function buildTree($tokens) {
     for ($i=0;$i<count($tokens);$i++) {
         $token = $tokens[$i];
         $state = $context['state'];
-        _log($token . " " . var_export($context, true) . "\n");
+        _log($token . " " . var_export($context, true) . ". Tokens left: " . (count($tokens) - $i - 1) . "\n");
         if ($state == START_STATE) {
             if ($token === "\"" || $token === "'") {
                 $context['state'] = STRING;
@@ -145,7 +145,14 @@ function buildTree($tokens) {
                 continue;
             } else if ($token === "(") {
                 $context['state'] = FUNCTION_CALL;
-                $context['function'] = $context['var_or_function'];
+                if (!array_key_exists("children", $context)) {
+                    $context['children'] = array(
+                        array(
+                            "state" => VAR_OR_FUNCTION,
+                            "var_or_function" => $context['var_or_function'],
+                        ),
+                    );
+                }
                 $context = pushContext($context_stack, $context);
                 $context['state'] = FUNCTION_PARAMS;
                 continue;
@@ -383,6 +390,30 @@ function buildTree($tokens) {
             }
         } else if ($state === FUNCTION_DEF) {
             if ($token === " ") {
+                continue;
+            } else if (isValidVariable($token) && !array_key_exists("name", $context)) {
+                $context['name'] = $token;
+                continue;
+            } else if ($token === "(") {
+                $context = pushContext($context_stack, $context);
+                $context['state'] = FUNCTION_DEF_PARAMS;
+                $context['params'] = array();
+                continue;
+            } else if ($token === ")") {
+                $context['have_args'] = true;
+                continue;
+            } else if ($token === "{") {
+                $context = pushContext($context_stack, $context);
+                $context['state'] = BLOCK;
+                continue;
+            } else if ($token === "}") {
+                $context = popContext($context_stack, $context, $tree);
+                continue;
+            }
+        } else if ($state === FUNCTION_DEF_PARAMS) {
+            if ($token === ")") {
+                $context = popContext($context_stack, $context, $tree);
+                $i --;
                 continue;
             }
         }
