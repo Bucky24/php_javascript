@@ -4,6 +4,7 @@ include_once("types.php");
 include_once("builtin.php");
 include_once("module.php");
 include_once("loader.php");
+include_once("utils.php");
 
 function getChildenOfType($statement, $type) {
     if (!array_key_exists('children', $statement)) {
@@ -114,7 +115,10 @@ function execute($tree, &$context = null) {
                 call_user_func_array($function, $paramData);
             }
         } else if ($statement['state'] == STRING) {
-            $results[] = implode('', $statement['contents']);
+            $results[] = array(
+                "type" => "string",
+                "data" => implode('', $statement['contents']),
+            );
         } else if ($statement['state'] == VAR_DEFINITION) {
             $value = execute($statement['children'], $context)[0];
             $context['variables'][$statement['name']] = $value;
@@ -179,10 +183,21 @@ function execute($tree, &$context = null) {
                 execute(array($post), $context);
             }
         } else if ($statement['state'] == NUMBER) {
-            $results[] = intval($statement['number']);
+            $results[] = array(
+                "type" => "number",
+                "data" => intval($statement['number']),
+            );
         } else if ($statement['state'] == INCREMENT) {
             if (array_key_exists($statement['variable'], $context['variables'])) {
-                $context['variables'][$statement['variable']] = $context['variables'][$statement['variable']] + 1;
+                $value = $context['variables'][$statement['variable']];
+                if ($value['type'] !== "number") {
+                    throw new Exception("Attempting to increment a non-number");
+                }
+                $data = getValue($value);
+                $context['variables'][$statement['variable']] = array(
+                    "type" => "number",
+                    "data" => $data + 1,
+                );
             } else {
                 throw new Exception("No such variable \"" . $statement['var_or_function'] . "\"");
             }
@@ -237,8 +252,18 @@ function execute($tree, &$context = null) {
                     "statements" => getChildenOfType($statement, BLOCK),
                 ),
             );
-        } else if ($statement['state'] == OBJ_DESTRUCTURE) {
-            $results = array_merge($results, $statement['names']);
+        } else if ($statement['state'] == OBJ) {
+            $data = array();
+            foreach ($statement['values'] as $value) {
+                $value_result = execute($value['value'], $context)[0];
+                $data[$value['name']] = $value_result;
+            }
+            $results[] = array(
+                "type" => "object",
+                "data" => $data,
+            );
+        } else if ($statement['state'] == SINGLE_COMMENT) {
+            // pass
         } else {
             throw new Exception("Don't know how to execute {$statement['state']}");
         }

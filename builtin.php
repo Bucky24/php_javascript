@@ -1,8 +1,14 @@
 <?php
 
+require_once("utils.php");
+
 function console_log() {
     $params = func_get_args();
-    print(implode(" ", $params) . "\n");
+    $output = array();
+    foreach ($params as $param) {
+        $output[] = getValue($param);
+    }
+    print(implode(" ", $output) . "\n");
 }
 
 const BUILTIN_CLASSES = array(

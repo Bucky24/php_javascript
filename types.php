@@ -17,9 +17,10 @@ const MATH = "math";
 const INCREMENT = "increment";
 const BLOCK = "block";
 const IMPORT = "import";
-const OBJ_DESTRUCTURE = "obj_destructure";
+const OBJ = "obj";
 const EXPORT = "export";
 const FUNCTION_DEF = "function_def";
 const FUNCTION_DEF_PARAMS = "function_def_params";
+const SINGLE_COMMENT = 'single_comment';
 
 ?>

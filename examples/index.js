@@ -1,4 +1,4 @@
-import { foo, bar } from "./bleh.js";
+//import { foo, bar } from "./bleh.js";
 
 const name = "frog";
 if (name === "blah") {
@@ -13,4 +13,8 @@ for (let i=0;i<5;i++) {
     console.log(i);
 }
 
-foo();
+//foo();
+
+const obj = {
+    foo: 'bleh',
+};

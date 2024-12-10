@@ -12,6 +12,7 @@ function _log($str) {
 }
 
 function processCode($code) {
+    _log("Start processing code");
     $tokens = tokenize($code);
 
     $tree = buildTree($tokens);
@@ -86,6 +87,9 @@ function buildTree($tokens) {
                 $context['quote_type'] = $token;
                 $context['contents'] = array();
                 continue;
+            } else if ($token === ";") {
+                // in this case everything else handled it and was popped
+                continue;  
             } else if ($token === "const") {
                 $context['state'] = VAR_DEFINITION;
                 $context['constant'] = true;
@@ -121,7 +125,7 @@ function buildTree($tokens) {
                 $context['state'] = IMPORT;
                 continue;  
             } else if ($token === "{") {
-                $context['state'] = OBJ_DESTRUCTURE;
+                $context['state'] = OBJ;
                 continue;  
             } else if ($token === "export") {
                 $context['state'] = EXPORT;
@@ -129,11 +133,14 @@ function buildTree($tokens) {
             } else if ($token === "function") {
                 $context['state'] = FUNCTION_DEF;
                 continue;
+            } else if ($token === "/") {
+                $context['state'] = SINGLE_COMMENT;
+                continue;
             } else if (isValidVariable($token)) {
                 $context['var_or_function'] = $token;
                 $context['state'] = VAR_OR_FUNCTION;
                 continue;
-            } 
+            }
         } else if ($state == VAR_OR_FUNCTION) {
             if ($token === ".") {
                 $old_context = $context;
@@ -165,14 +172,14 @@ function buildTree($tokens) {
                 $context['operator'] = $token;
                 $context['left_hand'] = $oldContext;
                 continue;
-            } else if ($token === "+" || $token === "-" || $token === "/" || $token === "*") {
+            } else if ($token === "+" || $token === "-" || $token === "/" || $token === "*" || $token === "|") {
                 $oldContext = $context;
                 $context = newContext();
                 $context['state'] = MATH;
                 $context['operator'] = $token;
                 $context['left_hand'] = $oldContext;
                 continue;
-            } else if ($token === ")") {
+            } else if ($token === ")" || $token === "from") {
                 $context = popContext($context_stack, $context, $tree);
                 $i--;
                 continue;
@@ -205,6 +212,10 @@ function buildTree($tokens) {
             continue;
         } else if ($state === FUNCTION_CALL) {
             if ($token === ";") {
+                $context = popContext($context_stack, $context, $tree);
+                $i--;
+                continue;
+            } else if ($token === ")") {
                 $context = popContext($context_stack, $context, $tree);
                 continue;
             }
@@ -331,6 +342,16 @@ function buildTree($tokens) {
                     $context['variable'] = $context['left_hand']['var_or_function'];
                     continue;
                 }
+            } else if ($token === "|") {
+                if ($context['operator'] === "|") {
+                    $context['operator'] = "||";
+                    $context = pushContext($context_stack, $context);
+                    continue; 
+                }
+            } else if ($token === ";") {
+                $context = popContext($context_stack, $context, $tree);
+                $i --;
+                continue;   
             }
         } else if ($state === INCREMENT) {
             if ($token === ")") {
@@ -363,21 +384,41 @@ function buildTree($tokens) {
                 $i--;
                 continue;
             }
-        } else if ($state === OBJ_DESTRUCTURE) {
-            if ($token === " ") {
+        } else if ($state === OBJ) {
+            if (!array_key_exists("substate", $context)) {
+                $context['substate'] = "waiting_for_name";
+                $context['values'] = array();
+            }
+            if ($token === " " || $token === "\n") {
                 continue;
             } else if ($token === ",") {
                 // may need to do something different here
-                continue;
-            } else if ($token === "}") {
-                $context = popContext($context_stack, $context, $tree);
-                continue;
-            } else {
-                if (!array_key_exists("names", $context)) {
-                    $context['names'] = array();
+                if ($context['substate'] === "waiting_for_value") {
+                    $context['values'][] = array(
+                        "name" => $context['name'],
+                        "value" => $context['children'],
+                    );
+                    $context['children'] = array();
+                    $context['substate'] = "waiting_for_name";
+                    continue;
                 }
-                $context['names'][] = $token;
-                continue;
+            } else if ($token === "}") {
+                if ($context['substate'] === "waiting_for_name") {
+                    $context = popContext($context_stack, $context, $tree);
+                    continue;
+                }
+            } else if (isValidVariable($token)) {
+                if ($context['substate'] === "waiting_for_name") {
+                    $context['name'] = $token;
+                    $context['substate'] = "has_name";
+                    continue;
+                }
+            } else if ($token === ":") {
+                if ($context['substate'] === "has_name") {
+                    $context['substate'] = "waiting_for_value";
+                    $context = pushContext($context_stack, $context);
+                    continue;
+                }
             }
         } else if ($state === EXPORT) {
             if (array_key_exists("children", $context)) {
@@ -416,6 +457,14 @@ function buildTree($tokens) {
                 $i --;
                 continue;
             }
+        } else if ($state === SINGLE_COMMENT) {
+            if ($token === "\n") {
+                $context = popContext($context_stack, $context, $tree);
+                $i --;
+                continue;
+            } else {
+                continue;
+            }
         }
         throw new Exception("Unexpected token \"$token\" in state \"$state\"");
     }
@@ -432,7 +481,7 @@ function buildTree($tokens) {
 }
 
 function tokenize($code) {
-    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n", "'", "=", "<", ">", "!", "+", "-", "/", "*", ",");
+    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n", "'", "=", "<", ">", "!", "+", "-", "/", "*", ",", "|", "&", ":");
     $tokens = array();
     $buffer = "";
     for ($i=0;$i<strlen($code);$i++) {
