@@ -72,6 +72,10 @@ function isComparitor($token) {
     return false;
 }
 
+function isMath($token) {
+    return ($token === "+" || $token === "-" || $token === "/" || $token === "*" || $token === "|");
+}
+
 function buildTree($tokens) {
     $context = newContext();
     $context_stack = array();
@@ -80,7 +84,15 @@ function buildTree($tokens) {
     for ($i=0;$i<count($tokens);$i++) {
         $token = $tokens[$i];
         $state = $context['state'];
-        _log($token . " " . var_export($context, true) . ". Tokens left: " . (count($tokens) - $i - 1) . "\n");
+        $prev_context = null;
+        if (count($context_stack) > 0) {
+            $prev_context = $context_stack[count($context_stack)-1];
+        }
+        $prev_state = "none";
+        if ($prev_context) {
+            $prev_state = $prev_context['state'];
+        }
+        _log($token . " " . var_export($context, true) . ". Previous context: $prev_state. Tokens left: " . (count($tokens) - $i - 1) . "\n");
         if ($state == START_STATE) {
             if ($token === "\"" || $token === "'") {
                 $context['state'] = STRING;
@@ -169,20 +181,34 @@ function buildTree($tokens) {
             } else if ($token === " ") {
                 continue;
             } else if (isComparitor($token)) {
-                $oldContext = $context;
-                $context = newContext();
-                $context['state'] = COMPARISON;
-                $context['operator'] = $token;
-                $context['left_hand'] = $oldContext;
-                continue;
-            } else if ($token === "+" || $token === "-" || $token === "/" || $token === "*" || $token === "|") {
-                $oldContext = $context;
-                $context = newContext();
-                $context['state'] = MATH;
-                $context['operator'] = $token;
-                $context['left_hand'] = $oldContext;
-                continue;
-            } else if ($token === ")" || $token === "from" || $token === ";") {
+                if ($prev_context && $prev_context['state'] == NEGATION) {
+                    // let the above handle it
+                    $context = popContext($context_stack, $context, $tree);
+                    $i --;
+                    continue;
+                } else {
+                    $oldContext = $context;
+                    $context = newContext();
+                    $context['state'] = COMPARISON;
+                    $context['operator'] = $token;
+                    $context['left_hand'] = $oldContext;
+                    continue;
+                }
+            } else if (isMath($token)) {
+                if ($prev_context && $prev_context['state'] == NEGATION) {
+                    // let the above handle it
+                    $context = popContext($context_stack, $context, $tree);
+                    $i --;
+                    continue;
+                } else {
+                    $oldContext = $context;
+                    $context = newContext();
+                    $context['state'] = MATH;
+                    $context['operator'] = $token;
+                    $context['left_hand'] = $oldContext;
+                    continue;
+                }
+            } else if ($token === ")" || $token === "from" || $token === ";" || $token === ",") {
                 $context = popContext($context_stack, $context, $tree);
                 $i--;
                 continue;
@@ -201,6 +227,9 @@ function buildTree($tokens) {
         } else if ($state == FUNCTION_PARAMS) {
             if ($token === ")") {
                 $context = popContext($context_stack, $context, $tree);
+                $i --;
+                continue;
+            } else if ($token === ",") {
                 continue;
             }
             $context = pushContext($context_stack, $context);
@@ -351,7 +380,7 @@ function buildTree($tokens) {
                     $context = pushContext($context_stack, $context);
                     continue; 
                 }
-            } else if ($token === ";") {
+            } else if ($token === ";" || $token === ")") {
                 $context = popContext($context_stack, $context, $tree);
                 $i --;
                 continue;   
@@ -492,6 +521,13 @@ function buildTree($tokens) {
             if ($token === ";") {
                 $context = popContext($context_stack, $context, $tree);
                 $i --;
+                continue;
+            } else if (isMath($token)) {
+                $oldContext = $context;
+                $context = newContext();
+                $context['state'] = MATH;
+                $context['operator'] = $token;
+                $context['left_hand'] = $oldContext;
                 continue;
             } else {
                 $context = pushContext($context_stack, $context);
