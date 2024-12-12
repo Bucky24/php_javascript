@@ -9,6 +9,8 @@ if (name === "blah") {
     console.log("bar foo");
 }
 
+let thing = !name;
+
 for (let i=0;i<5;i++) {
     console.log(i);
 }

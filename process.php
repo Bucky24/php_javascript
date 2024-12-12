@@ -136,6 +136,9 @@ function buildTree($tokens) {
             } else if ($token === "/") {
                 $context['state'] = SINGLE_COMMENT;
                 continue;
+            } else if ($token === "!") {
+                $context['state'] = NEGATION;
+                continue;
             } else if (isValidVariable($token)) {
                 $context['var_or_function'] = $token;
                 $context['state'] = VAR_OR_FUNCTION;
@@ -179,7 +182,7 @@ function buildTree($tokens) {
                 $context['operator'] = $token;
                 $context['left_hand'] = $oldContext;
                 continue;
-            } else if ($token === ")" || $token === "from") {
+            } else if ($token === ")" || $token === "from" || $token === ";") {
                 $context = popContext($context_stack, $context, $tree);
                 $i--;
                 continue;
@@ -483,6 +486,16 @@ function buildTree($tokens) {
                 $i --;
                 continue;
             } else {
+                continue;
+            }
+        } else if ($state === NEGATION) {
+            if ($token === ";") {
+                $context = popContext($context_stack, $context, $tree);
+                $i --;
+                continue;
+            } else {
+                $context = pushContext($context_stack, $context);
+                $i --;
                 continue;
             }
         }

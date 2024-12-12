@@ -76,6 +76,9 @@ function getFunctionByName($name, $context = null) {
 }
 
 function execute($tree, &$context = null) {
+    if (!$context) {
+        $context = array();
+    }
     if (!array_key_exists("variables", $context)) {
         $context["variables"] = array();
     }
@@ -264,6 +267,17 @@ function execute($tree, &$context = null) {
             );
         } else if ($statement['state'] == SINGLE_COMMENT) {
             // pass
+        } else if ($statement['state'] == NEGATION) {
+            $result = execute($statement['children'], $context)[0];
+
+            if ($result['type'] === "string") {
+                $results[] = array(
+                    "type" => "boolean",
+                    "data" => false,
+                );
+            } else {
+                throw new Exception("Negation can't handle type {$result['type']}");
+            }
         } else {
             throw new Exception("Don't know how to execute {$statement['state']}");
         }
