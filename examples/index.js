@@ -13,6 +13,9 @@ for (let i=0;i<5;i++) {
     console.log(i);
 }
 
+function thing(wee, blah) {
+    console.log(wee);
+}
 //foo();
 
 const obj = {

@@ -406,6 +406,18 @@ function buildTree($tokens) {
                 if ($context['substate'] === "waiting_for_name") {
                     $context = popContext($context_stack, $context, $tree);
                     continue;
+                } else if ($context['substate'] === "has_name") {
+                    $context['values'][] = array(
+                        "name" => $context['name'],
+                        "value" => array(
+                            "state" => VAR_OR_FUNCTION,
+                            "var_or_function" => $context['name'],
+                        ),
+                    );
+                    $context = popContext($context_stack, $context, $tree);
+                    continue;
+                } else {
+                    print("Unexpected substate {$context['substate']}\n");
                 }
             } else if (isValidVariable($token)) {
                 if ($context['substate'] === "waiting_for_name") {
@@ -452,9 +464,17 @@ function buildTree($tokens) {
                 continue;
             }
         } else if ($state === FUNCTION_DEF_PARAMS) {
+            if (!array_key_exists("params", $context)) {
+                $context['params'] = array();
+            }
             if ($token === ")") {
                 $context = popContext($context_stack, $context, $tree);
                 $i --;
+                continue;
+            } else if (isValidVariable($token)) {
+                $context['params'][] = $token;
+                continue;
+            } else if ($token === "," || $token === " ") {
                 continue;
             }
         } else if ($state === SINGLE_COMMENT) {
