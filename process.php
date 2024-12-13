@@ -164,6 +164,9 @@ function buildTree($tokens) {
             } else if ($token === "!") {
                 $context['state'] = NEGATION;
                 continue;
+            } else if ($token === "new") {
+                $context['state'] = INSTANCE;
+                continue;
             } else if (isValidVariable($token)) {
                 $context['var_or_function'] = $token;
                 $context['state'] = VAR_OR_FUNCTION;
@@ -553,6 +556,15 @@ function buildTree($tokens) {
                 $i --;
                 continue;
             }
+        } else if ($state === INSTANCE) {
+            if ($token === " ") {
+                continue;
+            } else if (isValidVariable($token, $context)) {
+                $context['state'] = VAR_OR_FUNCTION;
+                $context['instance'] = true;
+                $context['var_or_function'] = $token;
+                continue;
+            }
         }
         throw new Exception("Unexpected token \"$token\" in state \"$state\"");
     }
@@ -569,7 +581,7 @@ function buildTree($tokens) {
 }
 
 function tokenize($code) {
-    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n", "'", "=", "<", ">", "!", "+", "-", "/", "*", ",", "|", "&", ":");
+    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n", "'", "=", "<", ">", "!", "+", "-", "/", "*", ",", "|", "&", ":", "$", "{", "}");
     $tokens = array();
     $buffer = "";
     for ($i=0;$i<strlen($code);$i++) {

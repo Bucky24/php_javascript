@@ -23,5 +23,6 @@ const FUNCTION_DEF = "function_def";
 const FUNCTION_DEF_PARAMS = "function_def_params";
 const SINGLE_COMMENT = 'single_comment';
 const NEGATION = "negation";
+const INSTANCE = "instance";
 
 ?>
