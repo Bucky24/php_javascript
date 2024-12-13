@@ -100,8 +100,12 @@ function buildTree($tokens) {
                 $context['contents'] = array();
                 continue;
             } else if ($token === ";") {
+                if ($prev_state === BLOCK) {
+                    $context = popContext($context_stack, $context, $tree);
+                    continue;
+                }
                 // in this case everything else handled it and was popped
-                continue;  
+                continue;
             } else if ($token === "const") {
                 $context['state'] = VAR_DEFINITION;
                 $context['constant'] = true;
@@ -125,6 +129,15 @@ function buildTree($tokens) {
                     $context = $last_entry;
                     $i--;
                     continue;
+                }
+                // see if our previous entry is a block that has a conditional child
+                if ($prev_state === BLOCK) {
+                    $last_entry = array_pop($prev_context['children']);
+                    if ($last_entry['state'] == CONDITIONAL || $last_entry['state'] == CONDITIONAL_GROUP) {
+                        $context = $last_entry;
+                        $i--;
+                        continue;
+                    }
                 }
             } else if ($token === "for") {
                 $context['state'] = FOR_LOOP;
@@ -392,13 +405,19 @@ function buildTree($tokens) {
                 continue;
             }
         } else if ($state === BLOCK) {
+            if (!array_key_exists("finished", $context)) {
+                $context['finished'] = false;
+            }
             if ($token === "}") {
+                $context['finished'] = true;
                 $context = popContext($context_stack, $context, $tree);
                 $i --;
                 continue;
+            } else if (!$context['finished']) {
+                $context = pushContext($context_stack, $context);
+                $i--;
+                continue;
             }
-            $context = pushContext($context_stack, $context);
-            continue;
         } else if ($state === IMPORT) {
             if ($token === " ") {
                 continue;
