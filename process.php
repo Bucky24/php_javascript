@@ -175,6 +175,18 @@ function buildTree($tokens) {
             } else if ($token === "`") {
                 $context['state'] = TEMPLATE_STRING;
                 continue;
+            } else if ($token === ".") {
+                $last_entry = array_pop($tree);
+                if ($last_entry['state'] === FUNCTION_CALL) {
+                    $old_context = $context;
+                    $context = pushContext($context_stack, $context);
+                    $context['state'] = NESTED_PATH;
+                    $context['path'] = array($last_entry);
+                    continue;
+                }
+            } else if ($token === "(") {
+                $context['state'] = ARROW_FUNCTION;
+                continue;
             }
         } else if ($state == VAR_OR_FUNCTION) {
             if ($token === ".") {
@@ -238,6 +250,13 @@ function buildTree($tokens) {
                 $context['path'][] = $token;
                 continue;
             } else if ($token === ".") {
+                continue;
+            } else if ($token === "(") {
+                $old_context = $context;
+                $context = newContext();
+                $context['state'] = VAR_OR_FUNCTION;
+                $context['var_or_function'] = $old_context;
+                $i --;
                 continue;
             } else {
                 $context = popContext($context_stack, $context, $tree);
@@ -614,6 +633,40 @@ function buildTree($tokens) {
                 }
                 $context['buffer'][] = $token;
                 continue;
+            }
+        } else if ($state === ARROW_FUNCTION) {
+            if (!array_key_exists("substate", $context)) {
+                $context['substate'] = "getting_params";
+            }
+            if ($token === ")") {
+                if ($context['substate'] === "getting_params") {
+                    $context['substate'] = "getting_arrow";
+                    continue;
+                }
+            } else if ($token === " ") {
+                continue;
+            } else if ($token === "=") {
+                if ($context['substate'] === "getting_arrow") {
+                    $context['substate'] = "getting_arrow_2";
+                    continue;
+                }
+            } else if ($token === ">") {
+                if ($context['substate'] === "getting_arrow_2") {
+                    $context['substate'] = "has_arrow";
+                    continue;
+                }
+            } else if ($token === "{") {
+                if ($context['substate'] === "has_arrow") {
+                    $context['substate'] = "getting_body";
+                    $context = pushContext($context_stack, $context);
+                    $context['state'] = BLOCK;
+                    continue;
+                }
+            } else if ($token === "}") {
+                if ($context['substate'] === "getting_body") {
+                    $context = popContext($context_stack, $context, $tree);
+                    continue;
+                }
             }
         }
         throw new Exception("Unexpected token \"$token\" in state \"$state\"");
