@@ -56,7 +56,8 @@ function popContext(&$context_stack, $context, &$tree) {
 
 function isValidVariable($token) {
     for ($i=0;$i<strlen($token);$i++) {
-        if (ctype_alpha($token) || is_numeric($token) || $token === "_") {
+        $char = $token[$i];
+        if (ctype_alpha($char) || is_numeric($char) || $char === "_") {
             continue;
         }
         return false;
@@ -171,6 +172,9 @@ function buildTree($tokens) {
                 $context['var_or_function'] = $token;
                 $context['state'] = VAR_OR_FUNCTION;
                 continue;
+            } else if ($token === "`") {
+                $context['state'] = TEMPLATE_STRING;
+                continue;
             }
         } else if ($state == VAR_OR_FUNCTION) {
             if ($token === ".") {
@@ -224,7 +228,7 @@ function buildTree($tokens) {
                     $context['left_hand'] = $oldContext;
                     continue;
                 }
-            } else if ($token === ")" || $token === "from" || $token === ";" || $token === ",") {
+            } else if ($token === ")" || $token === "from" || $token === ";" || $token === "," || $token === "}") {
                 $context = popContext($context_stack, $context, $tree);
                 $i--;
                 continue;
@@ -565,6 +569,52 @@ function buildTree($tokens) {
                 $context['var_or_function'] = $token;
                 continue;
             }
+        } else if ($state === TEMPLATE_STRING) {
+            if (!array_key_exists("seen_dollar", $context)) {
+                $context['seen_dollar'] = false;
+            }
+            if (!array_key_exists("children", $context)) {
+                $context['children'] = array();
+            }
+            if (!array_key_exists("buffer", $context)) {
+                $context['buffer'] = array();
+            }
+            if ($token === "$") {
+                $context['seen_dollar'] = true;
+                continue;
+            } else if ($token === "{") {
+                if ($context['seen_dollar']) {
+                    $context['seen_dollar'] = false;
+                    if (count($context['buffer']) > 0) {
+                        $context['children'][] = array(
+                            "state" => STRING,
+                            "content" => implode("", $context['buffer']),
+                        );
+                        $context['buffer'] = array();
+                    }
+                    $context = pushContext($context_stack, $context);
+                    $context['state'] = BLOCK;
+                    continue;
+                }
+            } else if ($token === "}") {
+                continue;
+            } else if ($token === "`") {
+                if (count($context['buffer']) > 0) {
+                    $context['children'][] = array(
+                        "state" => STRING,
+                        "content" => implode("", $context['buffer']),
+                    );
+                    $context['buffer'] = array();
+                }
+                $context = popContext($context_stack, $context, $tree);
+                continue;
+            } else {
+                if ($context['seen_dollar']) {
+                    $context['buffer'][] = '$';
+                }
+                $context['buffer'][] = $token;
+                continue;
+            }
         }
         throw new Exception("Unexpected token \"$token\" in state \"$state\"");
     }
@@ -581,7 +631,7 @@ function buildTree($tokens) {
 }
 
 function tokenize($code) {
-    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n", "'", "=", "<", ">", "!", "+", "-", "/", "*", ",", "|", "&", ":", "$", "{", "}");
+    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n", "'", "=", "<", ">", "!", "+", "-", "/", "*", ",", "|", "&", ":", "$", "{", "}", "`");
     $tokens = array();
     $buffer = "";
     for ($i=0;$i<strlen($code);$i++) {

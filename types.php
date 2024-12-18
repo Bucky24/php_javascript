@@ -24,5 +24,6 @@ const FUNCTION_DEF_PARAMS = "function_def_params";
 const SINGLE_COMMENT = 'single_comment';
 const NEGATION = "negation";
 const INSTANCE = "instance";
+const TEMPLATE_STRING = "template_string";
 
 ?>
