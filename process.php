@@ -484,6 +484,14 @@ function buildTree($tokens) {
                     );
                     $context = popContext($context_stack, $context, $tree);
                     continue;
+                } else if ($context['substate'] === "waiting_for_value") {
+                    $context['values'][] = array(
+                        "name" => $context['name'],
+                        "value" => $context['children'],
+                    );
+                    $context['children'] = array();
+                    $context = popContext($context_stack, $context, $tree);
+                    continue;
                 } else {
                     print("Unexpected substate {$context['substate']}\n");
                 }
