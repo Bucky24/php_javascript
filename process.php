@@ -392,7 +392,7 @@ function buildTree($tokens) {
                 }
             }
         } else if ($state === NUMBER) {
-            if ($token === ";") {
+            if ($token === ";" || $token === "\n") {
                 $context = popContext($context_stack, $context, $tree);
                 $i --;
                 continue;
