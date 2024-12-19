@@ -102,7 +102,7 @@ function buildTree($tokens) {
                 $context['state'] = VAR_DEFINITION;
                 $context['constant'] = true;
                 continue;
-            } else if ($token === "let") {
+            } else if ($token === "let" || $token === "var") {
                 $context['state'] = VAR_DEFINITION;
                 $context['constant'] = false;
                 continue;
@@ -656,6 +656,13 @@ function buildTree($tokens) {
             } else if ($token === "}") {
                 if ($context['substate'] === "getting_body") {
                     $context = popContext($context_stack, $context, $tree);
+                    continue;
+                }
+            } else if ($token === "function") {
+                if ($context['substate'] === "getting_params") {
+                    $context['state'] = WRAPPED_STATEMENT;
+                    $context = pushContext($context_stack, $context);
+                    $i --;
                     continue;
                 }
             }
