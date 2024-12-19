@@ -29,5 +29,6 @@ const ARROW_FUNCTION = "arrow_function";
 const DESTRUCTURE = 'destructure';
 const IMPORT_VAR = "import_var";
 const WRAPPED_STATEMENT = "wrapped_statement";
+const IMPORT_ALL = "import_all";
 
 ?>

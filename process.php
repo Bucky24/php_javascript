@@ -178,6 +178,13 @@ function buildTree($tokens) {
             } else if ($token === "(") {
                 $context['state'] = ARROW_FUNCTION;
                 continue;
+            } else if ($token === "*") {
+                if ($prev_context !== null) {
+                    // we don't know what to do with this, force it up the chain
+                    $context = popContext($context_stack, $context, $tree);
+                    $i --;
+                    continue;
+                }
             }
         } else if ($state == VAR_OR_FUNCTION) {
             if ($token === ".") {
@@ -509,7 +516,21 @@ function buildTree($tokens) {
                 }
             }
         } else if ($state === EXPORT) {
-            if (array_key_exists("children", $context)) {
+            if (!array_key_exists("export_import", $context)) {
+                $context['export_import'] = true;
+            }
+            if ($token === "*") {
+                // in this case this export behaves like an import from this point forward
+                $context['export_import'] = true;
+                $context = pushContext($context_stack, $context);
+                $context['state'] = IMPORT;
+                $context['children'] = array(
+                    array(
+                        "state" => IMPORT_ALL,
+                    ),
+                );
+                continue;
+            } else if (array_key_exists("children", $context)) {
                 $context = popContext($context_stack, $context, $tree);
                 $i --;
                 continue;
