@@ -216,7 +216,7 @@ function execute($tree, &$context = null) {
                 }
 
                 $file = getValue($file);
-                _log("handling import $file");
+                _log("handling import $file with context of " . var_export($context, true));
 
                 $contents = getModule($file);
                 if (!$contents) {
@@ -230,11 +230,21 @@ function execute($tree, &$context = null) {
                         $import['state'] = DESTRUCTURE;
                     } else if ($import['state'] === VAR_OR_FUNCTION) {
                         $import['state'] = IMPORT_VAR;
+                    } else if ($import['state'] === IMPORT_ALL) {
+                        // nothing needed
                     } else {
                         throw new Exception("Import doesn't know how to handle {$import['state']}");
                     }
                     $expect = array_merge($expect, execute(array($import), $context));
                 }
+                $exports = array();
+                foreach ($contents as $content) {
+                    if ($content['type'] === 'export') {
+                        $export = $content['export'];
+                        $exports[$export['name']] = $export;
+                    }
+                }
+
                 $expect_items = array();
                 foreach ($expect as $item) {
                     if ($item['type'] === "obj_destructure") {
@@ -249,18 +259,18 @@ function execute($tree, &$context = null) {
                             "export_name" => 'default',
                             "variable" => $name,
                         );
+                    } else if ($item['type'] === "import_all") {
+                        foreach ($exports as $key=>$value) {
+                            $expect_items[] = array(
+                                "export_name" => $key,
+                                "variable" => $key,
+                            );
+                        }
                     } else {
                         throw new Exception("Import doesn't know how to handle {$item['type']} for import $file");
                     }
                 }
                 $expect = $expect_items;
-                $exports = array();
-                foreach ($contents as $content) {
-                    if ($content['type'] === 'export') {
-                        $export = $content['export'];
-                        $exports[$export['name']] = $export;
-                    }
-                }
 
                 foreach ($expect as $item) {
                     if (!array_key_exists($item['export_name'], $exports)) {
@@ -324,13 +334,17 @@ function execute($tree, &$context = null) {
                     "type" => "import_var",
                     "data" => $statement['var_or_function'],
                 );
+            } else  if ($statement['state'] === IMPORT_ALL) {
+                $results[] = array(
+                    "type" => "import_all",
+                );
             } else {
                 throw new Exception("Don't know how to execute {$statement['state']}");
             }
             $currentStatement ++;
         } catch (Exception $e) {
             _log("ERROR: {$e->getMessage()} {$e->getTraceAsString()}");
-            throw new Exception("Exception found when running statement " . var_export($statement, true) . ": {$e->getMessage()}");
+            throw new Exception("Exception found when running statement " . var_export($statement['state'], true) . ": {$e->getMessage()}");
         }
     }
 

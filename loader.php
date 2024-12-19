@@ -8,17 +8,6 @@ function loadFile($file) {
     $path = new SplFileInfo($file);
     $realPath = $path->getRealPath();
 
-    if (is_dir($realPath)) {
-        $testPath = $realPath . "/index.js";
-        if (!file_exists($testPath)) {
-            $testPath = $realPath . "/index.ts";
-        }
-
-        if (file_exists($testPath)) {
-            $realPath = $testPath;
-        }
-    }
-
     if (!file_exists($realPath)) {
         throw new Exception("Cannot find file '$file' => '$realPath'");
     }
@@ -81,10 +70,27 @@ function processFile($file, $context = array()) {
         $realPath = $context['dir'] . "/node_modules/$file/" . $packageData['main'];
         $modulePath = $file;
     }
+    
+    $path = new SplFileInfo($realPath);
+    $realPath = $path->getRealPath();
 
+    if (is_dir($realPath)) {
+        $testPath = $realPath . "/index.js";
+        if (!file_exists($testPath)) {
+            $testPath = $realPath . "/index.ts";
+        }
+
+        if (file_exists($testPath)) {
+            $realPath = $testPath;
+        } else {    
+            throw new Exception("$realPath is a directory with no index");
+        }
+    }
     $lines = loadFile($realPath);
     $result = processCode($lines, array("file" => $realPath));
     $tree = $result[0];
+
+    _log("processed code for $realPath, now executing");
 
     $context = array(
         "file" => $realPath,
