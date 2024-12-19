@@ -40,9 +40,23 @@ function processFile($file, $context = array()) {
         $modulePath = $realPath;
     } else {
         if (array_key_exists($file, BUILTIN_MODULES)) {
+            $exports = array();
+            $builtin = BUILTIN_MODULES[$file];
+            if (array_key_exists("functions", $builtin)) {
+                foreach ($builtin['functions'] as $key=>$value) {
+                    $exports[] = array(
+                        "type" => "export",
+                        "export" => array(
+                            "type" => "function",
+                            "name" => $key,
+                            "data" => $value,
+                        ),
+                    );
+                }
+            }
             return array(
                 "file" => $file,
-                "contents" => BUILTIN_MODULES[$file],
+                "contents" => $exports,
             );
         }
 

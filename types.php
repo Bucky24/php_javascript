@@ -26,5 +26,6 @@ const NEGATION = "negation";
 const INSTANCE = "instance";
 const TEMPLATE_STRING = "template_string";
 const ARROW_FUNCTION = "arrow_function";
+const DESTRUCTURE = 'destructure';
 
 ?>

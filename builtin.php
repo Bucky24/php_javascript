@@ -11,6 +11,10 @@ function console_log() {
     print(implode(" ", $output) . "\n");
 }
 
+function dotenv_config() {
+    print "STUB dotenv_config\n";
+}
+
 const BUILTIN_CLASSES = array(
     "console" => array(
         "functions" => array(
@@ -21,7 +25,9 @@ const BUILTIN_CLASSES = array(
 
 const BUILTIN_MODULES = array(
     "dotenv" => array(
-
+        "functions" => array(
+            "config" => "dotenv_config",
+        ),
     ),
 );
 
