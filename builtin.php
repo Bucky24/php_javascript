@@ -29,6 +29,11 @@ const BUILTIN_MODULES = array(
             "config" => "dotenv_config",
         ),
     ),
+    "express" => array(
+        "functions" => array(
+            "default" => "express_default",
+        ),
+    ),
 );
 
 ?>

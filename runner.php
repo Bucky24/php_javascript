@@ -228,13 +228,27 @@ function execute($tree, &$context = null) {
                 foreach ($statement['import'] as $import) {
                     if ($import['state'] === OBJ) {
                         $import['state'] = DESTRUCTURE;
+                    } else if ($import['state'] === VAR_OR_FUNCTION) {
+                        $import['state'] = IMPORT_VAR;
+                    } else {
+                        throw new Exception("Import doesn't know how to handle {$import['state']}");
                     }
                     $expect = array_merge($expect, execute(array($import), $context));
                 }
                 $expect_items = array();
                 foreach ($expect as $item) {
                     if ($item['type'] === "obj_destructure") {
-                        $expect_items = array_merge($expect_items, $item['data']);
+                        foreach ($item['data'] as $name) {
+                            $expect_items[] = array(
+                                "export_name" => $name,
+                                "variable" => $name,
+                            );
+                        }
+                    } else if ($item['type'] === 'import_var') {
+                        $expect_items[] = array(
+                            "export_name" => 'default',
+                            "variable" => $name,
+                        );
                     } else {
                         throw new Exception("Import doesn't know how to handle {$item['type']} for import");
                     }
@@ -249,12 +263,12 @@ function execute($tree, &$context = null) {
                 }
 
                 foreach ($expect as $item) {
-                    if (!array_key_exists($item, $exports)) {
-                        throw new Error("No export detected named $item");
+                    if (!array_key_exists($item['export_name'], $exports)) {
+                        throw new Error("No export detected named {$item['export_name']}");
                     }
-                    $export = $exports[$item];
+                    $export = $exports[$item['export_name']];
                     if ($export['type'] === "function") {
-                        $context['functions'][$item] = $export['data'];
+                        $context['functions'][$item['variable']] = $export['data'];
                     }
                 }
             } else if ($statement['state'] == EXPORT) {
@@ -304,6 +318,11 @@ function execute($tree, &$context = null) {
                 $results[] = array(
                     "type" => "obj_destructure",
                     "data" => $names,
+                );
+            } else if ($statement['state'] === IMPORT_VAR) {
+                $results[] = array(
+                    "type" => "import_var",
+                    "data" => $statement['var_or_function'],
                 );
             } else {
                 throw new Exception("Don't know how to execute {$statement['state']}");
