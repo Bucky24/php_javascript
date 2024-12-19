@@ -2,10 +2,22 @@
 
 require_once("process.php");
 require_once("runner.php");
+require_once("builtin.php");
 
 function loadFile($file) {
     $path = new SplFileInfo($file);
     $realPath = $path->getRealPath();
+
+    if (is_dir($realPath)) {
+        $testPath = $realPath . "/index.js";
+        if (!file_exists($realPath)) {
+            $testPath = $realPath . "/index.ts";
+        }
+
+        if (!file_exists($testPath)) {
+            $realPath = $testPath;
+        }
+    }
 
     if (!file_exists($realPath)) {
         throw new Exception("Cannot find file '$file' => '$realPath'");
@@ -16,15 +28,55 @@ function loadFile($file) {
     return $contents;
 }
 
-function processFile($file) {
-    $lines = loadFile($file);
-    $result = processCode($lines);
+function processFile($file, $context = array()) {
+    $realPath = null;
+    $modulePath = null;
+    if ($file[0] === '/') {
+        $realPath = $file;
+        $modulePath = $file;
+    } else if ($file[0] == ".") {
+        $path = new SplFileInfo($file);
+        $realPath = $path->getRealPath();
+        $modulePath = $realPath;
+    } else {
+        if (array_key_exists($file, BUILTIN_MODULES)) {
+            return array(
+                "file" => $file,
+                "contents" => BUILTIN_MODULES[$file],
+            );
+        }
+
+        // it's a module we need to load
+        if (!array_key_exists("dir", $context)) {
+            throw new Exception("Attempting to load a module but we have no directory set in the context");
+        }
+
+        $packagePath = $context['dir'] . "/node_modules/$file/package.json";
+        if (!file_exists($packagePath)) {
+            throw new Exception("Can't find module in $packagePath");
+        }
+        $packageString = file_get_contents($packagePath);
+        $packageData = json_decode($packageString, true);
+        if (!array_key_exists("main", $packageData)) {
+            throw new Exception("Module $file does not have a 'main' field in package.json");
+        }
+        $realPath = $context['dir'] . "/node_modules/$file/" . $packageData['main'];
+        $modulePath = $file;
+    }
+
+    $lines = loadFile($realPath);
+    $result = processCode($lines, array("file" => $realPath));
     $tree = $result[0];
 
     $context = array(
-        "file" => $file,
+        "file" => $realPath,
     );
-    return execute($tree, $context);
+    $contents = execute($tree, $context);
+
+    return array(
+        "file" => $realPath,
+        "contents" => $contents,
+    );
 }
 
 ?>

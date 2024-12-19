@@ -2,17 +2,8 @@
 
 include_once("types.php");
 
-$LOG = false;
-
-function _log($str) {
-    global $LOG;
-    if ($LOG) {
-        print("PROCESS LOG ". $str);
-    }
-}
-
-function processCode($code) {
-    _log("Start processing code");
+function processCode($code, $context) {
+    _log("Start processing code for " . $context['file']);
     $tokens = tokenize($code);
 
     $tree = buildTree($tokens);
@@ -31,7 +22,7 @@ function newContext() {
 }
 
 function pushContext(&$context_stack, $context) {
-    _log("Push {$context['state']}\n");
+    _log("Push {$context['state']}");
     $context_stack[] = $context;
     return newContext();
 }
@@ -49,7 +40,7 @@ function popContext(&$context_stack, $context, &$tree) {
         $next_item['children'][] = $context;
     }
 
-    _log("Pop {$next_item['state']}, " . count($context_stack) . " left on stack\n");
+    _log("Pop {$next_item['state']}, " . count($context_stack) . " left on stack");
 
     return $next_item;
 }
@@ -93,7 +84,7 @@ function buildTree($tokens) {
         if ($prev_context) {
             $prev_state = $prev_context['state'];
         }
-        _log($token . " " . var_export($context, true) . ". Previous context: $prev_state. Tokens left: " . (count($tokens) - $i - 1) . "\n");
+        _log($token . " " . var_export($context, true) . ". Previous context: $prev_state. Tokens left: " . (count($tokens) - $i - 1));
         if ($state == START_STATE) {
             if ($token === "\"" || $token === "'") {
                 $context['state'] = STRING;

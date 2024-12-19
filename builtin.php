@@ -19,4 +19,10 @@ const BUILTIN_CLASSES = array(
     ),
 );
 
+const BUILTIN_MODULES = array(
+    "dotenv" => array(
+
+    ),
+);
+
 ?>

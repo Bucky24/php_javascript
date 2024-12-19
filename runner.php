@@ -85,12 +85,15 @@ function execute($tree, &$context = null) {
     if (!array_key_exists("functions", $context)) {
         $context["functions"] = array();
     }
-
+    if (array_key_exists("file", $context)) {
+        $context['dir'] = dirname($context['file']);
+    }
 
     $currentStatement = 0;
     $results = array();
     while ($currentStatement < count($tree)) {
         $statement = $tree[$currentStatement];
+        _log("Executing statement ". $currentStatement . " " . $statement['state']);
 
         if ($statement['state'] == START_STATE) {
             // noop
@@ -207,17 +210,17 @@ function execute($tree, &$context = null) {
         } else if ($statement['state'] == IMPORT) {
             $file = execute($statement['children'], $context)[0];
 
-            $path = new SplFileInfo($context['file']);
-            $realPath = $path->getRealPath();
-            $dir = dirname($realPath);
-            $tempModulePath = $dir . "/" . $file;
-            $path = new SplFileInfo($tempModulePath);
-            $realPath = $path->getRealPath();
+            if (!$file['type'] === 'string') {
+                throw new Exception("Import path should be a string");
+            }
 
-            $contents = getModule($realPath);
+            $file = getValue($file);
+            _log("handling import $file");
+
+            $contents = getModule($file);
             if (!$contents) {
-                $contents = processFile($realPath);
-                saveModule($file, $contents);
+                $result = processFile($file, $context);
+                saveModule($result['file'], $result['contents']);
             }
             $expect = array();
             foreach ($statement['import'] as $import) {
@@ -258,7 +261,7 @@ function execute($tree, &$context = null) {
         } else if ($statement['state'] == OBJ) {
             $data = array();
             foreach ($statement['values'] as $value) {
-                $value_result = execute($value['value'], $context)[0];
+                $value_result = execute(array($value['value']), $context)[0];
                 $data[$value['name']] = $value_result;
             }
             $results[] = array(

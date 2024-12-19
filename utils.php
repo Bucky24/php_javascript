@@ -10,4 +10,17 @@ function getValue($param) {
     }
 }
 
+$LOG = false;
+
+function _log($str) {
+    global $LOG;
+    if ($LOG) {
+        print("LOG ". $str . "\n");
+    }
+}
+
+function _trace() {
+    debug_print_backtrace();
+}
+
 ?>
