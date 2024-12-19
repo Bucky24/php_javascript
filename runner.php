@@ -250,7 +250,7 @@ function execute($tree, &$context = null) {
                             "variable" => $name,
                         );
                     } else {
-                        throw new Exception("Import doesn't know how to handle {$item['type']} for import");
+                        throw new Exception("Import doesn't know how to handle {$item['type']} for import $file");
                     }
                 }
                 $expect = $expect_items;
@@ -264,7 +264,7 @@ function execute($tree, &$context = null) {
 
                 foreach ($expect as $item) {
                     if (!array_key_exists($item['export_name'], $exports)) {
-                        throw new Error("No export detected named {$item['export_name']}");
+                        throw new Error("No export detected in $file named {$item['export_name']}");
                     }
                     $export = $exports[$item['export_name']];
                     if ($export['type'] === "function") {
@@ -329,6 +329,7 @@ function execute($tree, &$context = null) {
             }
             $currentStatement ++;
         } catch (Exception $e) {
+            _log("ERROR: {$e->getMessage()} {$e->getTraceAsString()}");
             throw new Exception("Exception found when running statement " . var_export($statement, true) . ": {$e->getMessage()}");
         }
     }

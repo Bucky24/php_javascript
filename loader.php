@@ -10,11 +10,11 @@ function loadFile($file) {
 
     if (is_dir($realPath)) {
         $testPath = $realPath . "/index.js";
-        if (!file_exists($realPath)) {
+        if (!file_exists($testPath)) {
             $testPath = $realPath . "/index.ts";
         }
 
-        if (!file_exists($testPath)) {
+        if (file_exists($testPath)) {
             $realPath = $testPath;
         }
     }
@@ -35,7 +35,11 @@ function processFile($file, $context = array()) {
         $realPath = $file;
         $modulePath = $file;
     } else if ($file[0] == ".") {
-        $path = new SplFileInfo($file);
+        $path = $file;
+        if (array_key_exists("dir", $context)) {
+            $path = $context['dir'] . "/" . $file;
+        }
+        $path = new SplFileInfo($path);
         $realPath = $path->getRealPath();
         $modulePath = $realPath;
     } else {

@@ -34,6 +34,16 @@ const BUILTIN_MODULES = array(
             "default" => "express_default",
         ),
     ),
+    "cors" => array(
+        "functions" => array(
+            "default" => "cors_default",
+        ),
+    ),
+    "path" => array(
+        "functions" => array(
+            "default" => "path_default",
+        ),
+    ),
 );
 
 ?>

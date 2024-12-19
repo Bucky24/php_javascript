@@ -10,7 +10,7 @@ function getValue($param) {
     }
 }
 
-$LOG = true;
+$LOG = false;
 
 function _log($str) {
     global $LOG;
