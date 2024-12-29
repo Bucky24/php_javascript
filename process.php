@@ -179,6 +179,9 @@ function buildTree($tokens, $outsideContext) {
                     $context['state'] = VAR_OR_FUNCTION;
                     continue;
                 }
+            } else if ($token === "async") {
+                $context['state'] = FUNCTION_DEF;
+                continue;
             } else if (isValidVariable($token)) {
                 $context['var_or_function'] = $token;
                 $context['state'] = VAR_OR_FUNCTION;
@@ -581,6 +584,8 @@ function buildTree($tokens, $outsideContext) {
             }
         } else if ($state === FUNCTION_DEF) {
             if ($token === " ") {
+                continue;
+            } else if ($token === "function") {
                 continue;
             } else if (isValidVariable($token) && !array_key_exists("name", $context)) {
                 $context['name'] = $token;
