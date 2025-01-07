@@ -30,5 +30,7 @@ const DESTRUCTURE = 'destructure';
 const IMPORT_VAR = "import_var";
 const WRAPPED_STATEMENT = "wrapped_statement";
 const IMPORT_ALL = "import_all";
+const AWAITED_FUNCTION = "awaited_function";
+const OPTIONAL_CHAIN = "optional_chain";
 
 ?>

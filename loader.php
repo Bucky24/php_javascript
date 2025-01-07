@@ -58,16 +58,25 @@ function processFile($file, $context = array()) {
             throw new Exception("Attempting to load a module but we have no directory set in the context");
         }
 
-        $packagePath = $context['dir'] . "/node_modules/$file/package.json";
-        if (!file_exists($packagePath)) {
-            throw new Exception("Can't find module in $packagePath");
+        // attempt to find package json
+        $original = $context['dir'];
+        $packageDir = $context['dir'];
+        while (true) {
+            $packagePath = $packageDir . "/node_modules/$file/package.json";
+            if (file_exists($packagePath)) {
+                break;
+            }
+            if ($packageDir === "/") {
+                throw new Exception("Can't find module in $original or any parents");
+            }
+            $packageDir = dirname($packageDir);
         }
         $packageString = file_get_contents($packagePath);
         $packageData = json_decode($packageString, true);
         if (!array_key_exists("main", $packageData)) {
             throw new Exception("Module $file does not have a 'main' field in package.json");
         }
-        $realPath = $context['dir'] . "/node_modules/$file/" . $packageData['main'];
+        $realPath = $packageDir . "/node_modules/$file/" . $packageData['main'];
         $modulePath = $file;
     }
     

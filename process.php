@@ -182,6 +182,9 @@ function buildTree($tokens, $outsideContext) {
             } else if ($token === "async") {
                 $context['state'] = FUNCTION_DEF;
                 continue;
+            } else if ($token === "await") {
+                $context['state'] = AWAITED_FUNCTION;
+                continue;
             } else if (isValidVariable($token)) {
                 $context['var_or_function'] = $token;
                 $context['state'] = VAR_OR_FUNCTION;
@@ -264,6 +267,12 @@ function buildTree($tokens, $outsideContext) {
             } else if ($token === ")" || $token === "from" || $token === ";" || $token === "," || $token === "}") {
                 $context = popContext($context_stack, $context, $tree);
                 $i--;
+                continue;
+            } else if ($token === "?") {
+                $oldContext = $context;
+                $context = newContext();
+                $context['state'] = OPTIONAL_CHAIN;
+                $context['left_hand'] = $oldContext;
                 continue;
             }
         } else if ($state == NESTED_PATH) {
@@ -440,7 +449,7 @@ function buildTree($tokens, $outsideContext) {
                     $context = pushContext($context_stack, $context);
                     continue; 
                 }
-            } else if ($token === ";" || $token === ")") {
+            } else if ($token === ";" || $token === ")" || $token === ",") {
                 $context = popContext($context_stack, $context, $tree);
                 $i --;
                 continue;   
@@ -629,7 +638,7 @@ function buildTree($tokens, $outsideContext) {
                 continue;
             }
         } else if ($state === NEGATION) {
-            if ($token === ";") {
+            if ($token === ";" || $token === ")") {
                 $context = popContext($context_stack, $context, $tree);
                 $i --;
                 continue;
@@ -741,6 +750,22 @@ function buildTree($tokens, $outsideContext) {
                     continue;
                 }
             }
+        } else if ($state === AWAITED_FUNCTION) {
+            if ($token === " ") {
+                continue;
+            } else if (isValidVariable($token)) {
+                $context['var_or_function'] = $token;
+                $context['state'] = VAR_OR_FUNCTION;
+                $context['awaited'] = true;
+                continue;
+            }
+        } else if ($state === OPTIONAL_CHAIN) {
+            if ($token === "?") {
+                $context['operator'] = "??";
+                $context['state'] = MATH;
+                $context = pushContext($context_stack, $context);
+                continue;
+            }
         }
         $sub = "";
         if (array_key_exists("substate", $context)) {
@@ -761,7 +786,7 @@ function buildTree($tokens, $outsideContext) {
 }
 
 function tokenize($code) {
-    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n", "'", "=", "<", ">", "!", "+", "-", "/", "*", ",", "|", "&", ":", "$", "{", "}", "`");
+    $interesting_chars = array(".", "(", ")", ";", "\"", " ", "\n", "'", "=", "<", ">", "!", "+", "-", "/", "*", ",", "|", "&", ":", "$", "{", "}", "`", "?");
     $tokens = array();
     $buffer = "";
     for ($i=0;$i<strlen($code);$i++) {
