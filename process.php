@@ -65,7 +65,7 @@ function isComparitor($token) {
 }
 
 function isMath($token) {
-    return ($token === "+" || $token === "-" || $token === "/" || $token === "*" || $token === "|");
+    return ($token === "+" || $token === "-" || $token === "/" || $token === "*" || $token === "|" || $token === "&");
 }
 
 function buildTree($tokens, $outsideContext) {
@@ -202,7 +202,8 @@ function buildTree($tokens, $outsideContext) {
                     continue;
                 }
             } else if ($token === "(") {
-                $context['state'] = ARROW_FUNCTION;
+                $context['state'] = BLOCK;
+                $context['parhen'] = true;
                 continue;
             } else if ($token === "*") {
                 if ($prev_context !== null) {
@@ -210,6 +211,25 @@ function buildTree($tokens, $outsideContext) {
                     $context = popContext($context_stack, $context, $tree);
                     $i --;
                     continue;
+                }
+            } else if ($token === "=") {
+                if ($prev_state === FUNCTION_PARAMS) {
+                    $child = $prev_context['children'][count($prev_context['children'])-1];
+                    // we now need to look FORWARD, which normally we don't have to do. I could
+                    // have an intermediate step here but I don't want to
+                    if ($tokens[$i+1] === ">" && $child['state'] === BLOCK) {
+                        // it's not a block, it's an arrow function
+                        array_splice($prev_context['children'], count($prev_context['children'])-1, 1);
+                        $context = newContext();
+                        $context['state'] = ARROW_FUNCTION;
+                        $context['substate'] = "getting_arrow";
+                        $context['children'] = array(array(
+                            "state" => FUNCTION_PARAMS,
+                            "children" => array($child),
+                        ));
+                        $i--;
+                        continue;
+                    }
                 }
             }
         } else if ($state == VAR_OR_FUNCTION) {
@@ -300,7 +320,7 @@ function buildTree($tokens, $outsideContext) {
                 continue;
             } else if ($token === ",") {
                 continue;
-            }
+            } 
             $context = pushContext($context_stack, $context);
             $i--;
             continue;
@@ -468,6 +488,10 @@ function buildTree($tokens, $outsideContext) {
                 $context['finished'] = true;
                 $context = popContext($context_stack, $context, $tree);
                 $i --;
+                continue;
+            } else if ($token === ")" && array_key_exists("parhen", $context) && $context['parhen']) {
+                $context['finished'] = true;
+                $context = popContext($context_stack, $context, $tree);
                 continue;
             } else if (!$context['finished']) {
                 $context = pushContext($context_stack, $context);
@@ -749,6 +773,9 @@ function buildTree($tokens, $outsideContext) {
                     $i --;
                     continue;
                 }
+            } else if ($context['substate'] === 'getting_params') {
+                $context = pushContext($context_stack, $context);
+                continue;
             }
         } else if ($state === AWAITED_FUNCTION) {
             if ($token === " ") {
