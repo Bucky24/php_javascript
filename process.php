@@ -74,16 +74,20 @@ function buildTree($tokens, $outsideContext) {
     $tree = array();
     $line = 1;
     $lineChars = "";
+    $lastLineIndex = -1;
 
     for ($i=0;$i<count($tokens);$i++) {
         $token = $tokens[$i];
         $state = $context['state'];
         $prev_context = null;
-        if ($token === "\n") {
-            $line ++;
-            $lineChars = "";
-        } else {
-            $lineChars .= $token;
+        if ($lastLineIndex < $i) {
+            if ($token === "\n") {
+                $line ++;
+                $lineChars = "";
+            } else {
+                $lineChars .= $token;
+            }
+            $lastLineIndex = $i;
         }
         if (count($context_stack) > 0) {
             $prev_context = $context_stack[count($context_stack)-1];
@@ -352,6 +356,13 @@ function buildTree($tokens, $outsideContext) {
             } else if ($token === ";") {
                 $context = popContext($context_stack, $context, $tree);
                 continue;
+            } else if (isMath($token)) {
+                $oldContext = $context;
+                $context = newContext();
+                $context['state'] = MATH;
+                $context['operator'] = $token;
+                $context['left_hand'] = $oldContext;
+                continue;
             }
         } else if ($state === CONDITIONAL) {
             if ($token === " ") {
@@ -466,6 +477,12 @@ function buildTree($tokens, $outsideContext) {
             } else if ($token === "|") {
                 if ($context['operator'] === "|") {
                     $context['operator'] = "||";
+                    $context = pushContext($context_stack, $context);
+                    continue; 
+                }
+            } else if ($token === "&") {
+                if ($context['operator'] === "&") {
+                    $context['operator'] = "&&";
                     $context = pushContext($context_stack, $context);
                     continue; 
                 }
@@ -790,6 +807,23 @@ function buildTree($tokens, $outsideContext) {
             if ($token === "?") {
                 $context['operator'] = "??";
                 $context['state'] = MATH;
+                $context = pushContext($context_stack, $context);
+                continue;
+            } else if ($token === " ") {
+                continue;
+            } else {
+                // probably not an optional chain, probably a trinary
+                $context['state'] = TRINARY;
+                $context['substate'] = "has_left_hand";
+                $i--;
+                continue;
+            }
+        } else if ($state === TRINARY) {
+            if (!array_key_exists("substate", $context)) {
+                $context['substate'] = "needs_left_hand";
+            }
+            if ($context['substate'] === "has_left_hand") {
+                $context['substate'] = "needs_true_result";
                 $context = pushContext($context_stack, $context);
                 continue;
             }
