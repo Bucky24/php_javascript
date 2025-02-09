@@ -372,6 +372,13 @@ function buildTree($tokens, $outsideContext) {
                 $context['operator'] = $token;
                 $context['left_hand'] = $oldContext;
                 continue;
+            } else if ($token === "(") {
+                $child = $context['children'][0];
+                pushContext($context_stack, $context);
+                $context['state'] = VAR_OR_FUNCTION;
+                $context['var_or_function'] = $child;
+                $i--;
+                continue;
             }
         } else if ($state === CONDITIONAL) {
             if ($token === " ") {
@@ -471,7 +478,7 @@ function buildTree($tokens, $outsideContext) {
                 }
             }
         } else if ($state === NUMBER) {
-            if ($token === ";" || $token === "\n") {
+            if ($token === ";" || $token === "\n" || $token == ",") {
                 $context = popContext($context_stack, $context, $tree);
                 $i --;
                 continue;
@@ -518,6 +525,10 @@ function buildTree($tokens, $outsideContext) {
             } else if ($token === ")" && array_key_exists("parhen", $context) && $context['parhen']) {
                 $context['finished'] = true;
                 $context = popContext($context_stack, $context, $tree);
+                continue;
+            }  else if ($token === ","  && array_key_exists("parhen", $context) && $context['parhen']) {
+                $context['state'] = GROUPING_BLOCK;
+                $i--;
                 continue;
             } else if (!$context['finished']) {
                 $context = pushContext($context_stack, $context);
@@ -873,6 +884,23 @@ function buildTree($tokens, $outsideContext) {
             $context = pushContext($context_stack, $context);
             $i--;
             continue;
+        } else if ($state === GROUPING_BLOCK) {
+            if (!array_key_exists('finished', $context)) {
+                $context['finished'] = false;
+            }
+            if ($token === ",") {
+                $context = pushContext($context_stack, $context);
+                continue;
+            } else if ($token === ")") {
+                $context['finished'] = true;
+                continue;
+            } else if ($token === "(" && $context['finished']) {
+                $oldContext = $context;
+                $context['state'] = VAR_OR_FUNCTION;
+                $context['var_or_function'] = $oldContext;
+                $i--;
+                continue;
+            }
         }
         $sub = "";
         if (array_key_exists("substate", $context)) {

@@ -34,5 +34,6 @@ const AWAITED_FUNCTION = "awaited_function";
 const OPTIONAL_CHAIN = "optional_chain";
 const TRINARY = "trinary";
 const FUNCTION_RETURN = "function_return";
+const GROUPING_BLOCK = "grouping_block";
 
 ?>
