@@ -160,10 +160,14 @@ function execute($tree, &$context = null) {
                     throw new Exception("Unexpected operator \"$op\"");
                 }
             } else if ($statement['state'] == VAR_OR_FUNCTION) {
-                if (array_key_exists($statement['var_or_function'], $context['variables'])) {
-                    $results[] = $context['variables'][$statement['var_or_function']];
+                if ($statement['var_or_function'] === "this") {
+                    $results[] = $context;
                 } else {
-                    throw new Exception("No such variable \"" . $statement['var_or_function'] . "\"");
+                    if (array_key_exists($statement['var_or_function'], $context['variables'])) {
+                        $results[] = $context['variables'][$statement['var_or_function']];
+                    } else {
+                        throw new Exception("No such variable \"" . $statement['var_or_function'] . "\"");
+                    }
                 }
             } else if ($statement['state'] == CONDITIONAL_GROUP) {
                 foreach ($statement['children'] as $child) {
@@ -334,10 +338,18 @@ function execute($tree, &$context = null) {
                     "type" => "import_var",
                     "data" => $statement['var_or_function'],
                 );
-            } else  if ($statement['state'] === IMPORT_ALL) {
+            } else if ($statement['state'] === IMPORT_ALL) {
                 $results[] = array(
                     "type" => "import_all",
                 );
+            } else if ($statement['state'] === MATH) {
+                $left_value = execute(array($statement['left_hand']), $context)[0];
+                //$right_hand = execute(array($statement['children']), $context)[0];
+
+                print "DONE WITH MATH\n";
+
+                print_r($left_value);
+                //print_r($right_hand);
             } else {
                 throw new Exception("Don't know how to execute {$statement['state']}");
             }
